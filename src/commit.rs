@@ -1,42 +1,53 @@
-use chrono::Utc;
 use serde_json::json;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use uuid::Uuid;
 
 pub fn commit_changes(message: &str) {
     let vcs_dir = ".rustvcs";
-    let index_path = format!("{}/index.json", vcs_dir);
+    let head_path = format!("{}/HEAD", vcs_dir);
     let commits_dir = format!("{}/commits", vcs_dir);
+    let branches_dir = format!("{}/branches", vcs_dir);
 
-    if !Path::new(&index_path).exists() {
-        println!("No changes to commit.");
+    if !Path::new(&head_path).exists() {
+        println!("No repository found. Run `init` first.");
         return;
     }
 
-    let index: HashMap<String, String> =
-        serde_json::from_str(&fs::read_to_string(&index_path).unwrap_or("{}".to_string())).unwrap();
+    let branch = fs::read_to_string(&head_path).unwrap_or("main".to_string());
+    let branch_path = format!("{}/{}.json", branches_dir, branch);
 
-    if index.is_empty() {
-        println!("No files in staging.");
-        return;
+    // Create commit ID (for simplicity, using timestamp)
+    let commit_id = format!("{}", chrono::Utc::now().timestamp());
+    let commit_path = format!("{}/{}.json", commits_dir, commit_id);
+
+    // Collect all tracked files
+    let mut files = HashMap::new();
+    for entry in fs::read_dir(".").unwrap() {
+        let entry = entry.unwrap();
+        let path = entry.path();
+        if path.is_file() && path.extension().unwrap_or_default() != "json" {
+            let content = fs::read_to_string(&path).unwrap();
+            files.insert(path.to_str().unwrap().to_string(), content);
+        }
     }
 
-    let commit_id = Uuid::new_v4().to_string();
     let commit_data = json!({
         "id": commit_id,
-        "timestamp": Utc::now().to_rfc3339(),
         "message": message,
-        "files": index
+        "files": files
     });
 
     fs::write(
-        format!("{}/{}.json", commits_dir, commit_id),
+        &commit_path,
         serde_json::to_string_pretty(&commit_data).unwrap(),
     )
     .unwrap();
-    fs::write(index_path, "{}").unwrap(); // Clear staging
+    fs::write(
+        &branch_path,
+        serde_json::to_string_pretty(&commit_data).unwrap(),
+    )
+    .unwrap();
 
-    println!("Committed changes: {}", commit_id);
+    println!("Committed as {}", commit_id);
 }
