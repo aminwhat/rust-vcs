@@ -15,6 +15,7 @@ pub fn commit_changes(message: &str) {
         return;
     }
 
+    // Read the current branch from HEAD
     let branch = fs::read_to_string(&head_path).unwrap_or("main".to_string());
     let branch_path = format!("{}/{}.json", branches_dir, branch);
 
@@ -26,6 +27,7 @@ pub fn commit_changes(message: &str) {
     let staged_files = fs::read_to_string(&staging_path).unwrap();
     let staged_files: HashMap<String, String> = serde_json::from_str(&staged_files).unwrap();
 
+    // Prepare the commit data
     let commit_data = json!({
         "id": commit_id,
         "message": message,
@@ -39,15 +41,27 @@ pub fn commit_changes(message: &str) {
     )
     .unwrap();
 
-    // Also update the branch with the latest commit
+    // Update the current branch with the latest commit
+    let mut branch_data: HashMap<String, serde_json::Value> = if Path::new(&branch_path).exists() {
+        let content = fs::read_to_string(&branch_path).unwrap();
+        serde_json::from_str(&content).unwrap()
+    } else {
+        HashMap::new()
+    };
+
+    let commits = branch_data
+        .entry("commits".to_string())
+        .or_insert_with(|| json!([]));
+    commits.as_array_mut().unwrap().push(commit_data);
+
     fs::write(
         &branch_path,
-        serde_json::to_string_pretty(&commit_data).unwrap(),
+        serde_json::to_string_pretty(&branch_data).unwrap(),
     )
     .unwrap();
 
     // Clear staging area after commit
     fs::write(&staging_path, "{}").unwrap();
 
-    println!("Committed as {} with message: '{}'", commit_id, message);
+    println!("Committed as {} to branch '{}'", commit_id, branch);
 }

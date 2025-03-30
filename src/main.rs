@@ -1,3 +1,5 @@
+use clap::{Parser, Subcommand};
+
 use add::add_file;
 use branch::create_branch;
 use checkout::checkout;
@@ -14,21 +16,63 @@ mod init;
 mod log;
 mod merge;
 
+#[derive(Parser)]
+#[command(name = "rustvcs")]
+#[command(about = "A simple version control system written in Rust", long_about = None)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Initialize a new repository
+    Init,
+
+    /// Add a file to the staging area
+    Add {
+        /// Path to the file
+        file: String,
+    },
+
+    /// Commit changes to the repository
+    Commit {
+        /// Commit message
+        message: String,
+    },
+
+    /// Show commit history
+    Log,
+
+    /// Checkout a branch or commit
+    Checkout {
+        /// Branch name or commit ID
+        reference: String,
+    },
+
+    /// Create a new branch
+    Branch {
+        /// Name of the new branch
+        name: String,
+    },
+
+    /// Merge a branch into the current branch
+    Merge {
+        /// Branch to merge
+        branch: String,
+    },
+}
+
 fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    if args.len() > 1 && args[1] == "init" {
-        init_repo();
-    } else if args.len() > 2 && args[1] == "add" {
-        add_file(&args[2]);
-    } else if args.len() > 2 && args[1] == "commit" {
-        commit_changes(&args[2]);
-    } else if args.len() > 1 && args[1] == "log" {
-        show_log();
-    } else if args.len() > 2 && args[1] == "checkout" {
-        checkout(&args[2]);
-    } else if args.len() > 2 && args[1] == "branch" {
-        create_branch(&args[2]);
-    } else if args.len() > 2 && args[1] == "merge" {
-        merge_branch(&args[2]);
+    let cli = Cli::parse();
+
+    match cli.command {
+        Commands::Init => init_repo(),
+        Commands::Add { file } => add_file(&file),
+        Commands::Commit { message } => commit_changes(&message),
+        Commands::Log => show_log(),
+        Commands::Checkout { reference } => checkout(&reference),
+        Commands::Branch { name } => create_branch(&name),
+        Commands::Merge { branch } => merge_branch(&branch),
     }
 }
