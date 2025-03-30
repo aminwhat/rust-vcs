@@ -6,7 +6,7 @@ pub fn init_repo() {
     let commits_dir = format!("{}/commits", vcs_dir);
     let branches_dir = format!("{}/branches", vcs_dir);
     let head_path = format!("{}/HEAD", vcs_dir);
-    let main_branch_path = format!("{}/main.json", branches_dir);
+    // let main_branch_path = format!("{}/main.json", branches_dir);
 
     if Path::new(vcs_dir).exists() {
         println!("Repository already initialized.");

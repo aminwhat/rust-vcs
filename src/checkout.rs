@@ -1,6 +1,6 @@
-use serde_json::Value;
 use std::fs;
 use std::path::Path;
+
 pub fn checkout(branch_or_commit: &str) {
     let vcs_dir = ".rustvcs";
     let head_path = format!("{}/HEAD", vcs_dir);

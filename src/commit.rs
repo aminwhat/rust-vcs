@@ -27,10 +27,14 @@ pub fn commit_changes(message: &str) {
     let staged_files = fs::read_to_string(&staging_path).unwrap();
     let staged_files: HashMap<String, String> = serde_json::from_str(&staged_files).unwrap();
 
+    // Get current timestamp in ISO 8601 format
+    let timestamp = chrono::Utc::now().to_rfc3339();
+
     // Prepare the commit data
     let commit_data = json!({
         "id": commit_id,
         "message": message,
+        "timestamp": timestamp,
         "files": staged_files
     });
 
