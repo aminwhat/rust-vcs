@@ -5,12 +5,13 @@ use std::path::Path;
 
 pub fn commit_changes(message: &str) {
     let vcs_dir = ".rustvcs";
-    let head_path = format!("{}/HEAD", vcs_dir);
+    let staging_path = format!("{}/staging.json", vcs_dir);
     let commits_dir = format!("{}/commits", vcs_dir);
     let branches_dir = format!("{}/branches", vcs_dir);
+    let head_path = format!("{}/HEAD", vcs_dir);
 
-    if !Path::new(&head_path).exists() {
-        println!("No repository found. Run `init` first.");
+    if !Path::new(&staging_path).exists() {
+        println!("No files staged. Use `add` to stage files.");
         return;
     }
 
@@ -21,33 +22,32 @@ pub fn commit_changes(message: &str) {
     let commit_id = format!("{}", chrono::Utc::now().timestamp());
     let commit_path = format!("{}/{}.json", commits_dir, commit_id);
 
-    // Collect all tracked files
-    let mut files = HashMap::new();
-    for entry in fs::read_dir(".").unwrap() {
-        let entry = entry.unwrap();
-        let path = entry.path();
-        if path.is_file() && path.extension().unwrap_or_default() != "json" {
-            let content = fs::read_to_string(&path).unwrap();
-            files.insert(path.to_str().unwrap().to_string(), content);
-        }
-    }
+    // Load staged files
+    let staged_files = fs::read_to_string(&staging_path).unwrap();
+    let staged_files: HashMap<String, String> = serde_json::from_str(&staged_files).unwrap();
 
     let commit_data = json!({
         "id": commit_id,
         "message": message,
-        "files": files
+        "files": staged_files
     });
 
+    // Save the commit
     fs::write(
         &commit_path,
         serde_json::to_string_pretty(&commit_data).unwrap(),
     )
     .unwrap();
+
+    // Also update the branch with the latest commit
     fs::write(
         &branch_path,
         serde_json::to_string_pretty(&commit_data).unwrap(),
     )
     .unwrap();
 
-    println!("Committed as {}", commit_id);
+    // Clear staging area after commit
+    fs::write(&staging_path, "{}").unwrap();
+
+    println!("Committed as {} with message: '{}'", commit_id, message);
 }
